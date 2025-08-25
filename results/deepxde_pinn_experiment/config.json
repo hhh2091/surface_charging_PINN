@@ -1,0 +1,187 @@
+{
+  "model": {
+    "domain_bounds": {
+      "t": [
+        0.0,
+        1.0
+      ],
+      "x": [
+        0.0,
+        1.0
+      ],
+      "y": [
+        0.0,
+        1.0
+      ],
+      "z": [
+        0.0,
+        1.0
+      ],
+      "n_e": [
+        100000000.0,
+        1000000000000.0
+      ],
+      "T_e": [
+        1000,
+        50000
+      ],
+      "n_i": [
+        100000000.0,
+        1000000000000.0
+      ],
+      "T_i": [
+        300,
+        10000
+      ],
+      "S_flux": [
+        100,
+        2000
+      ],
+      "alpha_sun": [
+        0,
+        1.5707963267948966
+      ],
+      "alpha_ram": [
+        0,
+        3.141592653589793
+      ],
+      "material_id": [
+        0,
+        3
+      ]
+    },
+    "physical_params": {
+      "C": 1e-09,
+      "q_e": -1.602e-19,
+      "q_i": 1.602e-19,
+      "k_B": 1.381e-23,
+      "m_e": 9.109e-31,
+      "m_i": 1.673e-27,
+      "J_ph0": 1e-06,
+      "V_ph": 2.0,
+      "material_properties": {
+        "0": {
+          "work_function": 4.5,
+          "secondary_yield": 1.2
+        },
+        "1": {
+          "work_function": 5.1,
+          "secondary_yield": 0.8
+        },
+        "2": {
+          "work_function": 4.3,
+          "secondary_yield": 1.5
+        },
+        "3": {
+          "work_function": 4.8,
+          "secondary_yield": 1.0
+        }
+      }
+    },
+    "network_config": {
+      "input_dim": 12,
+      "output_dim": 1,
+      "hidden_layers": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "activation": "tanh",
+      "initialization": "Glorot normal",
+      "yield_network": {
+        "hidden_layers": [
+          32,
+          32,
+          32
+        ],
+        "activation": "tanh",
+        "initialization": "Glorot normal"
+      }
+    }
+  },
+  "boundary_conditions": {
+    "grounded_surface": false,
+    "floating_potential": -5.0,
+    "initial_conditions": {
+      "type": "zero",
+      "value": 0.0,
+      "center": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "amplitude": 1.0,
+      "width": 0.1
+    }
+  },
+  "data_constraints": {
+    "enabled": true,
+    "synthetic_data": {
+      "enabled": true,
+      "num_points": 1000,
+      "noise_level": 0.01,
+      "type": "random"
+    },
+    "experimental_data": {
+      "file_path": "./data/experimental_data.csv"
+    }
+  },
+  "loss_functions": {
+    "adaptive_weighting": {
+      "enabled": true,
+      "method": "gradient_normalization",
+      "update_frequency": 100,
+      "alpha": 0.9
+    },
+    "scheduler": {
+      "type": "exponential",
+      "params": {
+        "decay_rate": 0.95,
+        "decay_steps": 1000
+      }
+    }
+  },
+  "optimizer": {
+    "adam": {
+      "epochs": 10000,
+      "learning_rate": 0.001,
+      "beta1": 0.9,
+      "beta2": 0.999,
+      "epsilon": 1e-08
+    },
+    "lbfgs": {
+      "epochs": 5000,
+      "learning_rate": 1.0,
+      "max_iter": 50000,
+      "max_eval": null,
+      "tolerance_grad": 1e-07,
+      "tolerance_change": 1e-09,
+      "history_size": 100
+    },
+    "lr_scheduler": {
+      "type": "exponential",
+      "params": {
+        "gamma": 0.95,
+        "step_size": 1000
+      }
+    },
+    "early_stopping": {
+      "patience": 2000,
+      "min_delta": 1e-06,
+      "restore_best_weights": true
+    }
+  },
+  "training": {
+    "num_domain_points": 10000,
+    "num_boundary_points": 2000,
+    "num_initial_points": 1000,
+    "batch_size": null,
+    "validation_split": 0.1,
+    "shuffle": true,
+    "seed": 42
+  },
+  "save_dir": "./results/deepxde_pinn_experiment",
+  "save_frequency": 1000,
+  "checkpoint_frequency": 5000
+}

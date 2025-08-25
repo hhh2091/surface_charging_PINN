@@ -260,13 +260,13 @@ class DeepXDESurfaceChargingPINN:
     def _setup_pinn_model(self):
         """设置PINN模型"""
         # 创建PDE
-        self.pde = dde.PDE(
+        self.pde = dde.data.PDE(
             self.geom,
             self.physics.pde_residual,
             [],  # 边界条件将单独添加
-            num_domain=self.network_config.get('num_domain', 10000),
-            num_boundary=self.network_config.get('num_boundary', 1000),
-            num_test=self.network_config.get('num_test', 1000)
+            num_domain=self.network_config.get('num_domain', 1000),
+            num_boundary=self.network_config.get('num_boundary', 100),
+            num_test=self.network_config.get('num_test', 100)
         )
         
         # 创建模型
@@ -306,13 +306,13 @@ class DeepXDESurfaceChargingPINN:
             bcs.append(bc)
         
         # 更新PDE
-        self.pde = dde.PDE(
+        self.pde = dde.data.PDE(
             self.geom,
             self.physics.pde_residual,
             bcs,
             num_domain=self.network_config.get('num_domain', 10000),
             num_boundary=self.network_config.get('num_boundary', 1000),
-            num_test=self.network_config.get('num_test', 1000)
+            num_test=self.network_config.get('num_test', 100)
         )
         
         # 重新创建模型
@@ -333,13 +333,13 @@ class DeepXDESurfaceChargingPINN:
         existing_bcs.append(data_bc)
         
         # 更新PDE
-        self.pde = dde.PDE(
+        self.pde = dde.data.PDE(
             self.geom,
             self.physics.pde_residual,
             existing_bcs,
             num_domain=self.network_config.get('num_domain', 10000),
             num_boundary=self.network_config.get('num_boundary', 1000),
-            num_test=self.network_config.get('num_test', 1000)
+            num_test=self.network_config.get('num_test', 100)
         )
         
         # 重新创建模型

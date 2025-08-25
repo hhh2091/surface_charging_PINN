@@ -60,10 +60,6 @@ class DeepXDEPINNTrainer:
         
         # 设置DeepXDE后端
         dde.config.set_default_float('float32')
-        if device == 'cuda':
-            dde.config.set_default_device('gpu')
-        else:
-            dde.config.set_default_device('cpu')
         
         return device
     

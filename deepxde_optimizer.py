@@ -54,7 +54,7 @@ class TwoStageOptimizer:
     
     def train_adam_stage(self, 
                         loss_weights: Optional[Dict[str, float]] = None,
-                        callbacks: Optional[List[Callable]] = None) -> Tuple[dde.LossHistory, dde.TrainState]:
+                        callbacks: Optional[List[Callable]] = None) -> Tuple[Any, Any]:
         """Adam优化阶段
         
         Args:
@@ -96,7 +96,7 @@ class TwoStageOptimizer:
     
     def train_lbfgs_stage(self, 
                          loss_weights: Optional[Dict[str, float]] = None,
-                         callbacks: Optional[List[Callable]] = None) -> Tuple[dde.LossHistory, dde.TrainState]:
+                         callbacks: Optional[List[Callable]] = None) -> Tuple[Any, Any]:
         """L-BFGS优化阶段
         
         Args:
@@ -139,7 +139,7 @@ class TwoStageOptimizer:
     def train_full_pipeline(self, 
                            loss_weights: Optional[Dict[str, float]] = None,
                            callbacks: Optional[List[Callable]] = None,
-                           save_path: Optional[str] = None) -> Dict[str, Tuple[dde.LossHistory, dde.TrainState]]:
+                           save_path: Optional[str] = None) -> Dict[str, Tuple[Any, Any]]:
         """完整的两阶段训练流程
         
         Args:
@@ -201,7 +201,7 @@ class TwoStageOptimizer:
         
         return results
     
-    def _record_training_history(self, stage: str, losshistory: dde.LossHistory):
+    def _record_training_history(self, stage: str, losshistory: Any):
         """记录训练历史"""
         self.training_history[stage]['loss'] = losshistory.loss_train.copy()
         self.training_history[stage]['iterations'] = list(range(len(losshistory.loss_train)))
