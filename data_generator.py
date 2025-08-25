@@ -7,14 +7,14 @@ from scipy.spatial import distance_matrix
 class DataGenerator:
     """数据生成器，用于生成PINN训练所需的各种数据点"""
     
-    def __init__(self, config: Dict, device: torch.device = torch.device('cpu')):
+    def __init__(self, config: Dict, device: torch.device = None):
         """
         Args:
             config: 数据生成配置
             device: 计算设备
         """
         self.config = config
-        self.device = device
+        self.device = device if device is not None else torch.device('cpu')
         
         # 时空域范围
         self.t_range = config.get('t_range', [0.0, 1.0])  # 时间范围
