@@ -62,10 +62,10 @@
       3.141592653589793
     ],
     "n_materials": 3,
-    "n_collocation": 10000,
-    "n_boundary": 1000,
-    "n_initial": 1000,
-    "n_data": 2000,
+    "n_collocation": 5000,
+    "n_boundary": 500,
+    "n_initial": 500,
+    "n_data": 1000,
     "noise_level": 0.01,
     "sampling_method": "latin_hypercube"
   },
@@ -82,18 +82,18 @@
   "use_adaptive_weighting": true,
   "optimizer": {
     "adam": {
-      "lr": 0.001,
+      "lr": 0.0001,
       "betas": [
         0.9,
         0.999
       ],
       "eps": 1e-08,
       "weight_decay": 1e-06,
-      "max_iter": 5000
+      "max_iter": 3000
     },
     "lbfgs": {
-      "lr": 1.0,
-      "max_iter": 1000,
+      "lr": 0.1,
+      "max_iter": 500,
       "tolerance_grad": 1e-07,
       "tolerance_change": 1e-09,
       "history_size": 100,

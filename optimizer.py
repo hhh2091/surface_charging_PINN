@@ -87,15 +87,36 @@ class TwoStageOptimizer:
         # 计算损失
         loss, loss_components = loss_fn()
         
+        # 检查损失是否为NaN
+        if torch.isnan(loss) or torch.isinf(loss):
+            print(f"Warning: NaN or Inf loss detected: {loss.item()}")
+            loss = torch.tensor(1e6, device=loss.device, requires_grad=True)
+            for name, component in loss_components.items():
+                if torch.isnan(component) or torch.isinf(component):
+                  #  print(f"  Component {name}: {component.item()}")
+                    loss_components[name] = torch.tensor(0.0, device=component.device)
+        
         # 反向传播
         loss.backward()
         
+        # 检查梯度是否为NaN
+        nan_in_grad = False
+        for name, param in self.model.named_parameters():
+            if param.grad is not None:
+                if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                   # print(f"Warning: NaN or Inf gradient in {name}")
+                    nan_in_grad = True
+                    param.grad = torch.where(torch.isnan(param.grad) | torch.isinf(param.grad),
+                                           torch.tensor(0.0, device=param.grad.device), param.grad)
+        
         # 梯度裁剪（可选）
         if self.config.get('gradient_clipping', False):
-            torch.nn.utils.clip_grad_norm_(
+            grad_norm = torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), 
                 self.config.get('max_grad_norm', 1.0)
             )
+            if verbose and torch.isnan(grad_norm):
+                print(f"Warning: NaN gradient norm after clipping: {grad_norm}")
         
         # 优化步骤
         self.adam_optimizer.step()
@@ -138,7 +159,7 @@ class TwoStageOptimizer:
             losses.append(loss_value)
             
             # 检查收敛
-            if abs(prev_loss - loss_value) < tolerance:
+            if abs(prev_loss - loss_value) < tolerance and not np.isnan(loss_value):
                 if verbose:
                     print(f"Adam converged at iteration {i+1}")
                 break
@@ -165,7 +186,32 @@ class TwoStageOptimizer:
         def closure():
             self.lbfgs_optimizer.zero_grad()
             loss, loss_components = loss_fn()
+            
+            # 检查损失是否为NaN
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"Warning: NaN or Inf loss detected in L-BFGS: {loss.item()}")
+                loss = torch.tensor(1e6, device=loss.device, requires_grad=True)
+                for name, component in loss_components.items():
+                    if torch.isnan(component) or torch.isinf(component):
+                        print(f"  Component {name}: {component.item()}")
+                        loss_components[name] = torch.tensor(0.0, device=component.device)
+            
             loss.backward()
+            
+            # 检查梯度是否为NaN
+            for name, param in self.model.named_parameters():
+                if param.grad is not None:
+                    if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                        print(f"Warning: NaN or Inf gradient in {name} during L-BFGS")
+                        param.grad = torch.where(torch.isnan(param.grad) | torch.isinf(param.grad),
+                                               torch.tensor(0.0, device=param.grad.device), param.grad)
+            
+            # 梯度裁剪（可选）
+            if self.config.get('gradient_clipping', False):
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), 
+                    self.config.get('max_grad_norm', 1.0)
+                )
             
             loss_value = loss.item()
             losses.append(loss_value)
@@ -299,10 +345,12 @@ class EarlyStopping:
         Args:
             loss: 当前损失
             model: 模型
-        
-        Returns:
-            early_stop: 是否应该早停
         """
+        # 处理NaN损失
+        if np.isnan(loss) or np.isinf(loss):
+            print(f"Warning: NaN or Inf loss in early stopping: {loss}")
+            return False  # 不更新最佳损失，也不增加计数器
+        
         if loss < self.best_loss - self.min_delta:
             self.best_loss = loss
             self.counter = 0

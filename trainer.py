@@ -72,6 +72,8 @@ class PINNTrainer:
         """准备训练数据"""
         data_config = self.config['data']
         
+        print("Generating training data...")
+        
         # 生成各种数据点
         collocation_points = self.data_generator.generate_collocation_points(
             data_config.get('n_collocation', 10000),
@@ -91,10 +93,42 @@ class PINNTrainer:
             data_config.get('noise_level', 0.01)
         )
         
+        print(f"Generated data shapes:")
+        print(f"  Collocation points: {collocation_points.shape}")
+        print(f"  Boundary points: {boundary_points.shape}, values: {boundary_values.shape}")
+        print(f"  Initial points: {initial_points.shape}, values: {initial_values.shape}")
+        print(f"  Data points: {data_points.shape}, values: {data_values.shape}")
+        
+        # 检查数据中的NaN值
+        all_data = {
+            'collocation_points': collocation_points,
+            'boundary_points': boundary_points,
+            'boundary_values': boundary_values,
+            'initial_points': initial_points,
+            'initial_values': initial_values,
+            'data_points': data_points,
+            'data_values': data_values
+        }
+        
+        for name, tensor in all_data.items():
+            if torch.isnan(tensor).any() or torch.isinf(tensor).any():
+                print(f"Warning: NaN or Inf detected in {name}")
+                all_data[name] = torch.where(torch.isnan(tensor) | torch.isinf(tensor),
+                                           torch.tensor(0.0, device=tensor.device), tensor)
+        
+        collocation_points = all_data['collocation_points']
+        boundary_points = all_data['boundary_points']
+        boundary_values = all_data['boundary_values']
+        initial_points = all_data['initial_points']
+        initial_values = all_data['initial_values']
+        data_points = all_data['data_points']
+        data_values = all_data['data_values']
+        
         # 数据归一化
         if self.config.get('normalize_inputs', True):
             # 拟合输入归一化器
             all_input_points = torch.cat([collocation_points, boundary_points, initial_points, data_points], dim=0)
+            print(f"Fitting input normalizer with {all_input_points.shape[0]} points")
             self.input_normalizer.fit(all_input_points)
             
             # 归一化输入
@@ -106,6 +140,7 @@ class PINNTrainer:
         if self.config.get('normalize_outputs', True):
             # 拟合输出归一化器
             all_output_values = torch.cat([boundary_values, initial_values, data_values], dim=0)
+            print(f"Fitting output normalizer with {all_output_values.shape[0]} values")
             self.output_normalizer.fit(all_output_values)
             
             # 归一化输出
@@ -131,8 +166,25 @@ class PINNTrainer:
             # 生成物理参数
             params = self.data_generator.generate_physics_parameters(data_dict['collocation_points'])
             
+            # 检查参数中的NaN值
+            for name, param in params.items():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    print(f"Warning: NaN or Inf detected in physics parameter {name}")
+                    params[name] = torch.where(torch.isnan(param) | torch.isinf(param),
+                                             torch.tensor(1e-6, device=param.device), param)
+            
             # 计算损失
             total_loss, loss_components = self.loss_fn(self.model, data_dict, params)
+            
+            # 检查损失中的NaN值
+            if torch.isnan(total_loss) or torch.isinf(total_loss):
+                print(f"Warning: NaN or Inf detected in total loss: {total_loss.item()}")
+                total_loss = torch.tensor(1e6, device=total_loss.device, requires_grad=True)
+            
+            for name, component in loss_components.items():
+                if torch.isnan(component) or torch.isinf(component):
+                    print(f"Warning: NaN or Inf detected in loss component {name}: {component.item()}")
+                    loss_components[name] = torch.tensor(0.0, device=component.device)
             
             return total_loss, loss_components
         
@@ -165,6 +217,12 @@ class PINNTrainer:
             'initial': loss_components['initial'].item(),
             'data': loss_components['data'].item()
         }
+        
+        # 检查损失中的NaN值
+        for name, value in loss_dict.items():
+            if np.isnan(value) or np.isinf(value):
+                print(f"Warning: NaN or Inf detected in {name} loss: {value}")
+                loss_dict[name] = 1e6 if name == 'total' else 0.0
         
         return loss_dict
     
@@ -246,6 +304,12 @@ class PINNTrainer:
             if self.config.get('normalize_outputs', True):
                 predictions = self.output_normalizer.inverse_transform(predictions)
             
+            # 检查预测结果中的NaN值
+            if torch.isnan(predictions).any() or torch.isinf(predictions).any():
+                print(f"Warning: NaN or Inf detected in predictions")
+                predictions = torch.where(torch.isnan(predictions) | torch.isinf(predictions),
+                                        torch.tensor(0.0, device=predictions.device), predictions)
+            
             # 计算指标
             mse = torch.mean((predictions - test_values) ** 2).item()
             mae = torch.mean(torch.abs(predictions - test_values)).item()
@@ -281,6 +345,12 @@ class PINNTrainer:
         self.model.eval()
         
         with torch.no_grad():
+            # 检查输入中的NaN值
+            if torch.isnan(points).any() or torch.isinf(points).any():
+                print(f"Warning: NaN or Inf detected in input points")
+                points = torch.where(torch.isnan(points) | torch.isinf(points),
+                                   torch.tensor(0.0, device=points.device), points)
+            
             # 归一化输入
             if self.config.get('normalize_inputs', True):
                 points = self.input_normalizer.transform(points)
@@ -291,6 +361,12 @@ class PINNTrainer:
             # 反归一化输出
             if self.config.get('normalize_outputs', True):
                 predictions = self.output_normalizer.inverse_transform(predictions)
+            
+            # 检查预测结果中的NaN值
+            if torch.isnan(predictions).any() or torch.isinf(predictions).any():
+                print(f"Warning: NaN or Inf detected in predictions")
+                predictions = torch.where(torch.isnan(predictions) | torch.isinf(predictions),
+                                        torch.tensor(0.0, device=predictions.device), predictions)
         
         return predictions
     

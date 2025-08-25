@@ -50,10 +50,10 @@ def create_config():
             'n_materials': 3,
             
             # 数据点数量
-            'n_collocation': 10000,  # 配置点数量
-            'n_boundary': 1000,      # 边界点数量
-            'n_initial': 1000,       # 初始点数量
-            'n_data': 2000,          # 数据点数量
+            'n_collocation': 5000,  # 配置点数量 (减少以提高稳定性)
+            'n_boundary': 500,      # 边界点数量
+            'n_initial': 500,       # 初始点数量
+            'n_data': 1000,          # 数据点数量
             'noise_level': 0.01,     # 数据噪声水平
             'sampling_method': 'latin_hypercube'  # 采样方法
         },
@@ -76,15 +76,15 @@ def create_config():
         # 优化器配置
         'optimizer': {
             'adam': {
-                'lr': 1e-3,
+                'lr': 1e-4,  # 降低学习率以提高稳定性
                 'betas': (0.9, 0.999),
                 'eps': 1e-8,
                 'weight_decay': 1e-6,
-                'max_iter': 5000
+                'max_iter': 3000  # 减少迭代次数以加快训练
             },
             'lbfgs': {
-                'lr': 1.0,
-                'max_iter': 1000,
+                'lr': 0.1,  # 降低学习率以提高稳定性
+                'max_iter': 500,  # 减少迭代次数以加快训练
                 'tolerance_grad': 1e-7,
                 'tolerance_change': 1e-9,
                 'history_size': 100,

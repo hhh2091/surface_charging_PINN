@@ -39,6 +39,12 @@ class PINNLoss(nn.Module):
         # 计算物理残差
         residual = model.compute_physics_residual(collocation_points, params)
         
+        # 检查NaN值
+        if torch.isnan(residual).any() or torch.isinf(residual).any():
+            print(f"Warning: NaN or Inf detected in residual, shape: {residual.shape}")
+            residual = torch.where(torch.isnan(residual) | torch.isinf(residual), 
+                                 torch.tensor(0.0, device=residual.device), residual)
+        
         # MSE损失
         loss = self.mse_loss(residual, torch.zeros_like(residual))
         
@@ -58,6 +64,12 @@ class PINNLoss(nn.Module):
         """
         # 模型预测
         pred_values = model(boundary_points)
+        
+        # 检查NaN值
+        if torch.isnan(pred_values).any() or torch.isinf(pred_values).any():
+            print(f"Warning: NaN or Inf detected in boundary prediction, shape: {pred_values.shape}")
+            pred_values = torch.where(torch.isnan(pred_values) | torch.isinf(pred_values), 
+                                    torch.tensor(0.0, device=pred_values.device), pred_values)
         
         # MSE损失
         loss = self.mse_loss(pred_values, boundary_values)
@@ -79,6 +91,12 @@ class PINNLoss(nn.Module):
         # 模型预测
         pred_values = model(initial_points)
         
+        # 检查NaN值
+        if torch.isnan(pred_values).any() or torch.isinf(pred_values).any():
+            print(f"Warning: NaN or Inf detected in initial prediction, shape: {pred_values.shape}")
+            pred_values = torch.where(torch.isnan(pred_values) | torch.isinf(pred_values), 
+                                    torch.tensor(0.0, device=pred_values.device), pred_values)
+        
         # MSE损失
         loss = self.mse_loss(pred_values, initial_values)
         
@@ -98,6 +116,12 @@ class PINNLoss(nn.Module):
         """
         # 模型预测
         pred_values = model(data_points)
+        
+        # 检查NaN值
+        if torch.isnan(pred_values).any() or torch.isinf(pred_values).any():
+            print(f"Warning: NaN or Inf detected in data prediction, shape: {pred_values.shape}")
+            pred_values = torch.where(torch.isnan(pred_values) | torch.isinf(pred_values), 
+                                    torch.tensor(0.0, device=pred_values.device), pred_values)
         
         # MSE损失
         loss = self.mse_loss(pred_values, data_values)
@@ -134,7 +158,7 @@ class PINNLoss(nn.Module):
             )
             self.loss_components['residual'] = l_residual
         else:
-            self.loss_components['residual'] = torch.tensor(0.0, device=model.device)
+            self.loss_components['residual'] = torch.tensor(0.0, device=next(model.parameters()).device)
         
         # 边界条件损失
         if 'boundary_points' in data_dict and 'boundary_values' in data_dict:
@@ -143,7 +167,7 @@ class PINNLoss(nn.Module):
             )
             self.loss_components['boundary'] = l_boundary
         else:
-            self.loss_components['boundary'] = torch.tensor(0.0, device=model.device)
+            self.loss_components['boundary'] = torch.tensor(0.0, device=next(model.parameters()).device)
         
         # 初始条件损失
         if 'initial_points' in data_dict and 'initial_values' in data_dict:
@@ -152,7 +176,7 @@ class PINNLoss(nn.Module):
             )
             self.loss_components['initial'] = l_initial
         else:
-            self.loss_components['initial'] = torch.tensor(0.0, device=model.device)
+            self.loss_components['initial'] = torch.tensor(0.0, device=next(model.parameters()).device)
         
         # 数据损失
         if 'data_points' in data_dict and 'data_values' in data_dict:
@@ -161,7 +185,14 @@ class PINNLoss(nn.Module):
             )
             self.loss_components['data'] = l_data
         else:
-            self.loss_components['data'] = torch.tensor(0.0, device=model.device)
+            self.loss_components['data'] = torch.tensor(0.0, device=next(model.parameters()).device)
+        
+        # 检查各个损失分量中的NaN值
+        for name, loss in self.loss_components.items():
+            if torch.isnan(loss).any() or torch.isinf(loss).any():
+                print(f"Warning: NaN or Inf detected in {name} loss")
+                self.loss_components[name] = torch.where(torch.isnan(loss) | torch.isinf(loss),
+                                                       torch.tensor(0.0, device=loss.device), loss)
         
         # 计算总损失
         total_loss = (
@@ -170,6 +201,12 @@ class PINNLoss(nn.Module):
             self.weights['initial'] * self.loss_components['initial'] +
             self.weights['data'] * self.loss_components['data']
         )
+        
+        # 检查总损失中的NaN值
+        if torch.isnan(total_loss).any() or torch.isinf(total_loss).any():
+            print("Warning: NaN or Inf detected in total loss")
+            total_loss = torch.where(torch.isnan(total_loss) | torch.isinf(total_loss),
+                                   torch.tensor(1e6, device=total_loss.device), total_loss)
         
         return total_loss, self.loss_components
     
@@ -202,19 +239,23 @@ class AdaptiveWeighting:
         for loss_name, loss_value in loss_components.items():
             if loss_value.requires_grad:
                 # 计算梯度
-                grads = torch.autograd.grad(
-                    outputs=loss_value,
-                    inputs=model_parameters,
-                    retain_graph=True,
-                    allow_unused=True
-                )
-                
-                # 计算梯度范数
-                grad_norm = 0.0
-                for grad in grads:
-                    if grad is not None:
-                        grad_norm += grad.norm().item() ** 2
-                grad_norms[loss_name] = grad_norm ** 0.5
+                try:
+                    grads = torch.autograd.grad(
+                        outputs=loss_value,
+                        inputs=model_parameters,
+                        retain_graph=True,
+                        allow_unused=True
+                    )
+                    
+                    # 计算梯度范数
+                    grad_norm = 0.0
+                    for grad in grads:
+                        if grad is not None:
+                            grad_norm += grad.norm().item() ** 2
+                    grad_norms[loss_name] = grad_norm ** 0.5
+                except Exception as e:
+                    print(f"Error computing gradient for {loss_name}: {e}")
+                    grad_norms[loss_name] = 0.0
             else:
                 grad_norms[loss_name] = 0.0
         

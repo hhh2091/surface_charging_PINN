@@ -56,6 +56,11 @@ class DataGenerator:
         else:
             points = self._uniform_sampling(n_points)
         
+        # 检查并处理NaN值
+        if np.isnan(points).any() or np.isinf(points).any():
+            print(f"Warning: NaN or Inf detected in generated collocation points")
+            points = np.where(np.isnan(points) | np.isinf(points), 0.0, points)
+        
         return torch.tensor(points, dtype=torch.float32, device=self.device)
     
     def _uniform_sampling(self, n_points: int) -> np.ndarray:
@@ -82,6 +87,11 @@ class DataGenerator:
         # 材料标识（整数）
         points[:, 11] = np.random.randint(0, self.n_materials, n_points).astype(float)  # material_id
         
+        # 检查并处理NaN值
+        if np.isnan(points).any() or np.isinf(points).any():
+            print(f"Warning: NaN or Inf detected in uniform sampling")
+            points = np.where(np.isnan(points) | np.isinf(points), 0.0, points)
+        
         return points
     
     def _latin_hypercube_sampling(self, n_points: int) -> np.ndarray:
@@ -97,7 +107,14 @@ class DataGenerator:
                 points[:, i] = (np.random.permutation(n_points) + points[:, i]) / n_points
         
         # 缩放到实际范围
-        return self._scale_to_ranges(points)
+        scaled_points = self._scale_to_ranges(points)
+        
+        # 检查并处理NaN值
+        if np.isnan(scaled_points).any() or np.isinf(scaled_points).any():
+            print(f"Warning: NaN or Inf detected in Latin hypercube sampling")
+            scaled_points = np.where(np.isnan(scaled_points) | np.isinf(scaled_points), 0.0, scaled_points)
+        
+        return scaled_points
     
     def _sobol_sampling(self, n_points: int) -> np.ndarray:
         """Sobol序列采样"""
@@ -109,7 +126,14 @@ class DataGenerator:
             # 如果没有scipy.stats.qmc，回退到均匀采样
             points = np.random.rand(n_points, 12)
         
-        return self._scale_to_ranges(points)
+        scaled_points = self._scale_to_ranges(points)
+        
+        # 检查并处理NaN值
+        if np.isnan(scaled_points).any() or np.isinf(scaled_points).any():
+            print(f"Warning: NaN or Inf detected in Sobol sampling")
+            scaled_points = np.where(np.isnan(scaled_points) | np.isinf(scaled_points), 0.0, scaled_points)
+        
+        return scaled_points
     
     def _scale_to_ranges(self, points: np.ndarray) -> np.ndarray:
         """将[0,1]范围的点缩放到实际物理范围"""
@@ -135,6 +159,11 @@ class DataGenerator:
         # 材料标识
         scaled_points[:, 11] = np.floor(points[:, 11] * self.n_materials).astype(float)
         scaled_points[:, 11] = np.clip(scaled_points[:, 11], 0, self.n_materials - 1)
+        
+        # 检查并处理NaN值
+        if np.isnan(scaled_points).any() or np.isinf(scaled_points).any():
+            print(f"Warning: NaN or Inf detected in scaling to ranges")
+            scaled_points = np.where(np.isnan(scaled_points) | np.isinf(scaled_points), 0.0, scaled_points)
         
         return scaled_points
     
@@ -180,6 +209,15 @@ class DataGenerator:
         boundary_points = np.vstack(boundary_points)
         boundary_values = np.vstack(boundary_values)
         
+        # 检查并处理NaN值
+        if np.isnan(boundary_points).any() or np.isinf(boundary_points).any():
+            print(f"Warning: NaN or Inf detected in boundary points")
+            boundary_points = np.where(np.isnan(boundary_points) | np.isinf(boundary_points), 0.0, boundary_points)
+        
+        if np.isnan(boundary_values).any() or np.isinf(boundary_values).any():
+            print(f"Warning: NaN or Inf detected in boundary values")
+            boundary_values = np.where(np.isnan(boundary_values) | np.isinf(boundary_values), 0.0, boundary_values)
+        
         return (torch.tensor(boundary_points, dtype=torch.float32, device=self.device),
                 torch.tensor(boundary_values, dtype=torch.float32, device=self.device))
     
@@ -199,6 +237,15 @@ class DataGenerator:
         
         # 初始条件：V(x, t=0) = 0
         initial_values = np.zeros((n_points, 1))
+        
+        # 检查并处理NaN值
+        if np.isnan(initial_points).any() or np.isinf(initial_points).any():
+            print(f"Warning: NaN or Inf detected in initial points")
+            initial_points = np.where(np.isnan(initial_points) | np.isinf(initial_points), 0.0, initial_points)
+        
+        if np.isnan(initial_values).any() or np.isinf(initial_values).any():
+            print(f"Warning: NaN or Inf detected in initial values")
+            initial_values = np.where(np.isnan(initial_values) | np.isinf(initial_values), 0.0, initial_values)
         
         return (torch.tensor(initial_points, dtype=torch.float32, device=self.device),
                 torch.tensor(initial_values, dtype=torch.float32, device=self.device))
@@ -225,6 +272,15 @@ class DataGenerator:
             noise = np.random.normal(0, noise_level * np.std(data_values), data_values.shape)
             data_values += noise
         
+        # 检查并处理NaN值
+        if np.isnan(data_points).any() or np.isinf(data_points).any():
+            print(f"Warning: NaN or Inf detected in data points")
+            data_points = np.where(np.isnan(data_points) | np.isinf(data_points), 0.0, data_points)
+        
+        if np.isnan(data_values).any() or np.isinf(data_values).any():
+            print(f"Warning: NaN or Inf detected in data values")
+            data_values = np.where(np.isnan(data_values) | np.isinf(data_values), 0.0, data_values)
+        
         return (torch.tensor(data_points, dtype=torch.float32, device=self.device),
                 torch.tensor(data_values, dtype=torch.float32, device=self.device))
     
@@ -239,6 +295,11 @@ class DataGenerator:
         # 简单的时空依赖解
         V = (0.1 * np.sin(np.pi * x) * np.sin(np.pi * y) * np.sin(np.pi * z) * 
              np.exp(-t) * np.log10(ne / 1e7) * (Te / 3000))
+        
+        # 检查并处理NaN值
+        if np.isnan(V).any() or np.isinf(V).any():
+            print(f"Warning: NaN or Inf detected in analytical solution")
+            V = np.where(np.isnan(V) | np.isinf(V), 0.0, V)
         
         return V.reshape(-1, 1)
     
@@ -274,15 +335,23 @@ class DataGenerator:
         Mprop[:, 0] = material_id.squeeze()  # 材料ID
         Mprop[:, 1] = 1.0  # 材料属性参数
         
+        # 检查并处理NaN值
+        tensors = {'ne': ne, 'Te': Te, 'ni': ni, 'Ti': Ti, 'Jph0': Jph0, 'Vph': Vph, 'C': C, 'Mprop': Mprop}
+        for name, tensor in tensors.items():
+            if torch.isnan(tensor).any() or torch.isinf(tensor).any():
+                print(f"Warning: NaN or Inf detected in {name}")
+                tensors[name] = torch.where(torch.isnan(tensor) | torch.isinf(tensor),
+                                          torch.tensor(1e-6 if name != 'C' else 1e-12, device=tensor.device), tensor)
+        
         params = {
-            'ne': ne,
-            'Te': Te,
-            'ni': ni,
-            'Ti': Ti,
-            'Jph0': Jph0,
-            'Vph': Vph,
-            'C': C,
-            'Mprop': Mprop
+            'ne': tensors['ne'],
+            'Te': tensors['Te'],
+            'ni': tensors['ni'],
+            'Ti': tensors['Ti'],
+            'Jph0': tensors['Jph0'],
+            'Vph': tensors['Vph'],
+            'C': tensors['C'],
+            'Mprop': tensors['Mprop']
         }
         
         return params
@@ -331,6 +400,12 @@ class DataNormalizer:
         Args:
             data: 训练数据 [n_samples, n_features]
         """
+        # 检查输入中的NaN值
+        if torch.isnan(data).any() or torch.isinf(data).any():
+            print(f"Warning: NaN or Inf detected in data for normalization")
+            data = torch.where(torch.isnan(data) | torch.isinf(data),
+                             torch.tensor(0.0, device=data.device), data)
+        
         if self.method == 'minmax':
             self.stats['min'] = torch.min(data, dim=0)[0]
             self.stats['max'] = torch.max(data, dim=0)[0]
@@ -367,15 +442,29 @@ class DataNormalizer:
         Returns:
             normalized_data: 归一化后的数据
         """
+        # 检查输入中的NaN值
+        if torch.isnan(data).any() or torch.isinf(data).any():
+            print(f"Warning: NaN or Inf detected in data for transformation")
+            data = torch.where(torch.isnan(data) | torch.isinf(data),
+                             torch.tensor(0.0, device=data.device), data)
+        
         if not self.fitted:
             raise ValueError("Normalizer must be fitted before transform")
         
         if self.method == 'minmax':
-            return (data - self.stats['min']) / self.stats['range']
+            result = (data - self.stats['min']) / self.stats['range']
         elif self.method == 'zscore':
-            return (data - self.stats['mean']) / self.stats['std']
+            result = (data - self.stats['mean']) / self.stats['std']
         elif self.method == 'robust':
-            return (data - self.stats['median']) / self.stats['iqr']
+            result = (data - self.stats['median']) / self.stats['iqr']
+        
+        # 检查结果中的NaN值
+        if torch.isnan(result).any() or torch.isinf(result).any():
+            print(f"Warning: NaN or Inf detected in normalized data")
+            result = torch.where(torch.isnan(result) | torch.isinf(result),
+                               torch.tensor(0.0, device=result.device), result)
+        
+        return result
     
     def inverse_transform(self, normalized_data: torch.Tensor) -> torch.Tensor:
         """逆归一化
@@ -386,15 +475,29 @@ class DataNormalizer:
         Returns:
             original_data: 原始尺度的数据
         """
+        # 检查输入中的NaN值
+        if torch.isnan(normalized_data).any() or torch.isinf(normalized_data).any():
+            print(f"Warning: NaN or Inf detected in normalized data for inverse transformation")
+            normalized_data = torch.where(torch.isnan(normalized_data) | torch.isinf(normalized_data),
+                                        torch.tensor(0.0, device=normalized_data.device), normalized_data)
+        
         if not self.fitted:
             raise ValueError("Normalizer must be fitted before inverse_transform")
         
         if self.method == 'minmax':
-            return normalized_data * self.stats['range'] + self.stats['min']
+            result = normalized_data * self.stats['range'] + self.stats['min']
         elif self.method == 'zscore':
-            return normalized_data * self.stats['std'] + self.stats['mean']
+            result = normalized_data * self.stats['std'] + self.stats['mean']
         elif self.method == 'robust':
-            return normalized_data * self.stats['iqr'] + self.stats['median']
+            result = normalized_data * self.stats['iqr'] + self.stats['median']
+        
+        # 检查结果中的NaN值
+        if torch.isnan(result).any() or torch.isinf(result).any():
+            print(f"Warning: NaN or Inf detected in inverse normalized data")
+            result = torch.where(torch.isnan(result) | torch.isinf(result),
+                               torch.tensor(0.0, device=result.device), result)
+        
+        return result
     
     def fit_transform(self, data: torch.Tensor) -> torch.Tensor:
         """拟合并应用归一化"""
