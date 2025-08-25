@@ -58,7 +58,7 @@ class BoundaryConditionManager:
         """
         ic_config = {
             'type': 'initial',
-            'boundary': lambda x, on_initial: np.isclose(x[:, 0], self.domain_bounds['t'][0]),
+            'boundary': lambda x, on_initial: np.isclose(x[-1] if x.ndim == 1 else x[:, -1], self.domain_bounds['t'][0]),
             'value': initial_func,
             'description': description
         }
@@ -436,8 +436,8 @@ class DataConstraintGenerator:
             对应的解析解值
         """
         # 简单的时空依赖解析解
-        t = X[:, 0]
-        x = X[:, 1]
+        x = X[:, 0]  # 空间维度
+        t = X[:, -1]  # 时间维度
         
         # 示例：衰减振荡解
         solution = np.exp(-0.1 * t) * np.sin(np.pi * x) * np.cos(2 * np.pi * t)

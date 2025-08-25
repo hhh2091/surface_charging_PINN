@@ -233,20 +233,21 @@ class DeepXDESurfaceChargingPINN:
         alpha_ram_bounds = self.domain_bounds.get('alpha_ram', (0, 2*np.pi))
         material_bounds = self.domain_bounds.get('material_id', (0, 5))
         
-        # 创建几何域
-        self.geom = dde.geometry.Hypercube(
-            [t_bounds[0], x_bounds[0], y_bounds[0], z_bounds[0],
-             n_e_bounds[0], T_e_bounds[0], n_i_bounds[0], T_i_bounds[0],
-             S_flux_bounds[0], alpha_sun_bounds[0], alpha_ram_bounds[0], material_bounds[0]],
-            [t_bounds[1], x_bounds[1], y_bounds[1], z_bounds[1],
-             n_e_bounds[1], T_e_bounds[1], n_i_bounds[1], T_i_bounds[1],
-             S_flux_bounds[1], alpha_sun_bounds[1], alpha_ram_bounds[1], material_bounds[1]]
+        # 创建时空几何域
+        # 空间几何 (3D)
+        spatial_geom = dde.geometry.Hypercube(
+            [x_bounds[0], y_bounds[0], z_bounds[0]],
+            [x_bounds[1], y_bounds[1], z_bounds[1]]
         )
+        # 时间域
+        time_domain = dde.geometry.TimeDomain(t_bounds[0], t_bounds[1])
+        # 组合时空几何
+        self.geom = dde.geometry.GeometryXTime(spatial_geom, time_domain)
     
     def _setup_main_network(self):
         """设置主神经网络VNN"""
-        # 网络架构配置
-        layer_sizes = [12] + self.network_config.get('hidden_layers', [128, 128, 128, 128]) + [1]
+        # 网络架构配置 (4维输入: t, x, y, z)
+        layer_sizes = [4] + self.network_config.get('hidden_layers', [128, 128, 128, 128]) + [1]
         activation = self.network_config.get('activation', 'tanh')
         initializer = self.network_config.get('initializer', 'Glorot uniform')
         
@@ -310,8 +311,8 @@ class DeepXDESurfaceChargingPINN:
             self.geom,
             self.physics.pde_residual,
             bcs,
-            num_domain=self.network_config.get('num_domain', 10000),
-            num_boundary=self.network_config.get('num_boundary', 1000),
+            num_domain=self.network_config.get('num_domain', 500),
+            num_boundary=self.network_config.get('num_boundary', 50),
             num_test=self.network_config.get('num_test', 100)
         )
         
@@ -337,8 +338,8 @@ class DeepXDESurfaceChargingPINN:
             self.geom,
             self.physics.pde_residual,
             existing_bcs,
-            num_domain=self.network_config.get('num_domain', 10000),
-            num_boundary=self.network_config.get('num_boundary', 1000),
+            num_domain=self.network_config.get('num_domain', 500),
+            num_boundary=self.network_config.get('num_boundary', 50),
             num_test=self.network_config.get('num_test', 100)
         )
         
