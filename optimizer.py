@@ -65,7 +65,7 @@ class TwoStageOptimizer:
             self.model.parameters(),
             lr=self.lbfgs_config['lr'],
             max_iter=self.lbfgs_config['max_iter'],
-            max_eval=self.lbfgs_config['max_eval'],
+            max_eval=None,#,self.lbfgs_config['max_eval'],
             tolerance_grad=self.lbfgs_config['tolerance_grad'],
             tolerance_change=self.lbfgs_config['tolerance_change'],
             history_size=self.lbfgs_config['history_size'],
