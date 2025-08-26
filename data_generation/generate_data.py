@@ -250,6 +250,8 @@ class SyntheticDataGenerator:
                 'alpha_sun': alpha_sun,
                 'material_id': material_id
             })
+
+        # print(combinations)
         
         return combinations
     
