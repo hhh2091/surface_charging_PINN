@@ -163,7 +163,9 @@
       "type": "exponential",
       "params": {
         "gamma": 0.95,
-        "step_size": 1000
+        "step_size": 1000,
+        "decay_rate": 0.95,
+        "decay_steps": 1000
       }
     },
     "early_stopping": {

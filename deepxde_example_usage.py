@@ -191,20 +191,12 @@ def main():
     X_test = []
     for t in t_test:
         for x in x_test:
-            # 创建12维输入向量
+            # 创建4维输入向量 (t, x, y, z)
             input_vec = np.array([
                 t,           # 时间
                 x,           # x坐标
                 0.5,         # y坐标
-                0.5,         # z坐标
-                1e10,        # 电子密度
-                20000,       # 电子温度
-                1e10,        # 离子密度
-                2000,        # 离子温度
-                1000,        # 太阳辐射通量
-                np.pi/4,     # 太阳入射角
-                np.pi/2,     # 迎风角
-                0            # 材料ID
+                0.5          # z坐标
             ])
             X_test.append(input_vec)
     

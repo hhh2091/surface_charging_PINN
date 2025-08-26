@@ -334,113 +334,117 @@ class DataConstraintGenerator:
         return X_data, y_data
     
     def _generate_random_points(self, num_points: int) -> np.ndarray:
-        """生成随机采样点"""
+        """生成随机采样点 - 只生成4维数据 (t, x, y, z)"""
         points = []
         
-        for key, (min_val, max_val) in self.domain_bounds.items():
-            if key in ['t', 'x', 'y', 'z', 'n_e', 'T_e', 'n_i', 'T_i', 
-                      'S_flux', 'alpha_sun', 'alpha_ram', 'material_id']:
-                if key in ['n_e', 'n_i']:  # 对数尺度采样
-                    samples = np.random.uniform(
-                        np.log10(min_val), np.log10(max_val), num_points
-                    )
-                    samples = 10**samples
-                else:
-                    samples = np.random.uniform(min_val, max_val, num_points)
+        # 只生成时空坐标，匹配4维几何
+        for key in ['t', 'x', 'y', 'z']:
+            if key in self.domain_bounds:
+                min_val, max_val = self.domain_bounds[key]
+                samples = np.random.uniform(min_val, max_val, num_points)
                 points.append(samples)
         
         return np.column_stack(points)
     
     def _generate_grid_points(self, num_points: int) -> np.ndarray:
-        """生成网格采样点"""
-        # 简化版本：只考虑时空坐标
-        t_bounds = self.domain_bounds['t']
-        x_bounds = self.domain_bounds['x']
+        """生成网格采样点 - 只生成4维数据 (t, x, y, z)"""
+        # 计算每个维度的点数 (4维网格)
+        points_per_dim = int(num_points**(1/4))
+        if points_per_dim < 2:
+            points_per_dim = 2
         
-        # 计算每个维度的点数
-        points_per_dim = int(np.sqrt(num_points))
+        # 生成各维度的值
+        t_vals = np.linspace(self.domain_bounds['t'][0], self.domain_bounds['t'][1], points_per_dim)
+        x_vals = np.linspace(self.domain_bounds['x'][0], self.domain_bounds['x'][1], points_per_dim)
+        y_vals = np.linspace(self.domain_bounds['y'][0], self.domain_bounds['y'][1], points_per_dim)
+        z_vals = np.linspace(self.domain_bounds['z'][0], self.domain_bounds['z'][1], points_per_dim)
         
-        t_vals = np.linspace(t_bounds[0], t_bounds[1], points_per_dim)
-        x_vals = np.linspace(x_bounds[0], x_bounds[1], points_per_dim)
+        # 创建4维网格
+        T, X, Y, Z = np.meshgrid(t_vals, x_vals, y_vals, z_vals, indexing='ij')
         
-        T, X = np.meshgrid(t_vals, x_vals)
-        
-        # 为其他维度设置默认值
+        # 展平并组合
         points = np.column_stack([
             T.flatten(),
             X.flatten(),
-            np.zeros(T.size),  # y
-            np.zeros(T.size),  # z
-            np.full(T.size, 1e9),  # n_e
-            np.full(T.size, 10000),  # T_e
-            np.full(T.size, 1e9),  # n_i
-            np.full(T.size, 1000),  # T_i
-            np.full(T.size, 1000),  # S_flux
-            np.full(T.size, 0),  # alpha_sun
-            np.full(T.size, 0),  # alpha_ram
-            np.zeros(T.size)  # material_id
+            Y.flatten(),
+            Z.flatten()
         ])
         
         return points[:num_points]
     
     def _generate_boundary_points(self, num_points: int) -> np.ndarray:
-        """生成边界采样点"""
-        # 在边界上生成点
+        """生成边界采样点 - 只生成4维数据 (t, x, y, z)"""
         points = []
         
-        # 时间边界
+        # 获取边界值
         t_min, t_max = self.domain_bounds['t']
         x_min, x_max = self.domain_bounds['x']
+        y_min, y_max = self.domain_bounds['y']
+        z_min, z_max = self.domain_bounds['z']
         
-        # 初始时刻的点
-        for i in range(num_points // 2):
-            point = [t_min]  # t = t_min
-            point.append(np.random.uniform(x_min, x_max))  # 随机x
-            
-            # 其他维度的随机值
-            for key, (min_val, max_val) in self.domain_bounds.items():
-                if key not in ['t', 'x']:
-                    if key in ['n_e', 'n_i']:
-                        val = 10**np.random.uniform(np.log10(min_val), np.log10(max_val))
-                    else:
-                        val = np.random.uniform(min_val, max_val)
-                    point.append(val)
-            
+        # 初始时刻的点 (t = t_min)
+        for i in range(num_points // 4):
+            point = [
+                t_min,  # t = t_min
+                np.random.uniform(x_min, x_max),  # 随机x
+                np.random.uniform(y_min, y_max),  # 随机y
+                np.random.uniform(z_min, z_max)   # 随机z
+            ]
             points.append(point)
         
-        # 空间边界的点
-        for i in range(num_points - num_points // 2):
-            point = [np.random.uniform(t_min, t_max)]  # 随机t
-            point.append(x_min if i % 2 == 0 else x_max)  # 边界x
-            
-            # 其他维度的随机值
-            for key, (min_val, max_val) in self.domain_bounds.items():
-                if key not in ['t', 'x']:
-                    if key in ['n_e', 'n_i']:
-                        val = 10**np.random.uniform(np.log10(min_val), np.log10(max_val))
-                    else:
-                        val = np.random.uniform(min_val, max_val)
-                    point.append(val)
-            
+        # x边界的点
+        for i in range(num_points // 4):
+            point = [
+                np.random.uniform(t_min, t_max),  # 随机t
+                x_min if i % 2 == 0 else x_max,   # 边界x
+                np.random.uniform(y_min, y_max),  # 随机y
+                np.random.uniform(z_min, z_max)   # 随机z
+            ]
+            points.append(point)
+        
+        # y边界的点
+        for i in range(num_points // 4):
+            point = [
+                np.random.uniform(t_min, t_max),  # 随机t
+                np.random.uniform(x_min, x_max),  # 随机x
+                y_min if i % 2 == 0 else y_max,   # 边界y
+                np.random.uniform(z_min, z_max)   # 随机z
+            ]
+            points.append(point)
+        
+        # z边界的点
+        for i in range(num_points - 3 * (num_points // 4)):
+            point = [
+                np.random.uniform(t_min, t_max),  # 随机t
+                np.random.uniform(x_min, x_max),  # 随机x
+                np.random.uniform(y_min, y_max),  # 随机y
+                z_min if i % 2 == 0 else z_max    # 边界z
+            ]
             points.append(point)
         
         return np.array(points)
     
     def _analytical_solution(self, X: np.ndarray) -> np.ndarray:
-        """简单的解析解 (用于测试)
+        """简单的解析解 (用于测试) - 处理4维输入 (t, x, y, z)
         
         Args:
-            X: 输入点
+            X: 输入点 [N, 4] - (t, x, y, z)
         
         Returns:
-            对应的解析解值
+            对应的解析解值 [N, 1]
         """
-        # 简单的时空依赖解析解
-        x = X[:, 0]  # 空间维度
-        t = X[:, -1]  # 时间维度
+        # 提取各维度
+        t = X[:, 0]  # 时间维度
+        x = X[:, 1]  # 空间x维度
+        y = X[:, 2]  # 空间y维度
+        z = X[:, 3]  # 空间z维度
         
-        # 示例：衰减振荡解
-        solution = np.exp(-0.1 * t) * np.sin(np.pi * x) * np.cos(2 * np.pi * t)
+        # 示例：3D空间中的衰减振荡解
+        solution = (np.exp(-0.1 * t) * 
+                   np.sin(np.pi * x) * 
+                   np.cos(np.pi * y) * 
+                   np.sin(0.5 * np.pi * z) * 
+                   np.cos(2 * np.pi * t))
         
         return solution.reshape(-1, 1)
     
