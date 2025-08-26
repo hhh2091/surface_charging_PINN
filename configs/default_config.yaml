@@ -1,0 +1,135 @@
+# 航天器表面充电PINN项目配置文件
+# Spacecraft Charging PINN Configuration
+
+# 数据生成参数 (Data Generation Parameters)
+data_generation:
+  # 环境参数范围 (Environmental Parameter Ranges)
+  n_e_range: [1e6, 1e8]        # 电子密度范围 (m^-3)
+  T_e_range: [0.1, 10.0]       # 电子温度范围 (eV)
+  n_i_range: [1e6, 1e8]        # 离子密度范围 (m^-3)
+  T_i_range: [0.1, 5.0]        # 离子温度范围 (eV)
+  
+  # 光照参数范围 (Solar Parameters)
+  S_flux_range: [0.0, 1400.0]  # 太阳辐射通量范围 (W/m^2)
+  alpha_sun_range: [0.0, 90.0] # 太阳入射角范围 (degrees)
+  
+  # 时间域 (Time Domain)
+  t_start: 0.0                 # 起始时间 (s)
+  t_end: 3600.0                # 结束时间 (s)
+  n_time_points: 100           # 时间点数量
+  
+  # 材料类型 (Material Types)
+  materials: [0, 1]            # 0: Kapton, 1: Aluminum
+  
+  # 数据集大小 (Dataset Size)
+  n_samples: 10000             # 训练样本数量
+  n_test_samples: 2000         # 测试样本数量
+
+# 网络架构参数 (Network Architecture)
+network:
+  # 主网络 V_NN (Main Network)
+  main_network:
+    layers: [8, 64, 64, 64, 1]  # 输入维度: [t, n_e, T_e, n_i, T_i, S_flux, alpha_sun, material_id]
+    activation: "tanh"           # 激活函数: tanh, swish
+    
+  # 子网络 NN_yield (Yield Network)
+  yield_network:
+    layers: [2, 32, 32, 1]      # 输入维度: [V, material_id]
+    activation: "tanh"           # 激活函数
+
+# 训练参数 (Training Parameters)
+training:
+  # 优化器设置 (Optimizer Settings)
+  adam:
+    learning_rate: 0.001
+    iterations: 20000
+    
+  lbfgs:
+    learning_rate: 1.0
+    iterations: 5000
+    
+  # 批处理 (Batch Settings)
+  batch_size: 1000
+  
+  # 损失函数权重 (Loss Function Weights)
+  loss_weights:
+    lambda_residual: 1.0        # 物理残差权重
+    lambda_data: 100.0          # 数据拟合权重
+    lambda_initial: 10.0        # 初始条件权重
+    
+  # 动态权重调整 (Dynamic Weight Adjustment)
+  use_gradient_normalization: true
+  weight_update_frequency: 1000
+
+# 物理常数 (Physical Constants)
+physics:
+  # 基本常数 (Fundamental Constants)
+  k_B: 1.380649e-23            # 玻尔兹曼常数 (J/K)
+  e: 1.602176634e-19           # 元电荷 (C)
+  m_e: 9.1093837015e-31        # 电子质量 (kg)
+  m_i: 1.67262192369e-27       # 质子质量 (kg)
+  
+  # 航天器参数 (Spacecraft Parameters)
+  C: 1e-9                      # 等效电容 (F)
+  A: 1.0                       # 表面积 (m^2)
+  
+  # 光电子参数 (Photoelectron Parameters)
+  T_ph: 1.5                    # 光电子特征温度 (eV)
+  
+  # 材料相关参数 (Material-specific Parameters)
+  materials:
+    kapton:  # material_id = 0
+      J_ph0_coefficient: 5e-6   # 光电子电流系数 (A/m^2 per W/m^2)
+      work_function: 4.5        # 功函数 (eV)
+      
+    aluminum:  # material_id = 1
+      J_ph0_coefficient: 3e-6   # 光电子电流系数 (A/m^2 per W/m^2)
+      work_function: 4.3        # 功函数 (eV)
+
+# 评估参数 (Evaluation Parameters)
+evaluation:
+  # 测试场景 (Test Scenarios)
+  scenarios:
+    eclipse_transition:         # 进入地球阴影区
+      S_flux_initial: 1360.0
+      S_flux_final: 0.0
+      transition_time: 100.0
+      
+    quiet_illuminated:          # 平静光照区
+      n_e: 1e6
+      T_e: 1.0
+      n_i: 1e6
+      T_i: 0.5
+      S_flux: 1360.0
+      alpha_sun: 0.0
+      
+  # 评估指标 (Evaluation Metrics)
+  metrics:
+    - "relative_l2_error"
+    - "rmse"
+    - "max_absolute_error"
+    - "physics_consistency"
+
+# 可视化参数 (Visualization Parameters)
+visualization:
+  # 图表设置 (Plot Settings)
+  figure_size: [12, 8]
+  dpi: 300
+  
+  # 输出格式 (Output Formats)
+  save_formats: ["png", "pdf"]
+  
+  # 结果保存路径 (Results Save Path)
+  results_dir: "results"
+  
+# 模型保存设置 (Model Saving Settings)
+model:
+  save_dir: "models"
+  save_frequency: 5000          # 每隔多少次迭代保存一次
+  keep_best: true              # 是否保留最佳模型
+  
+# 日志设置 (Logging Settings)
+logging:
+  level: "INFO"                # DEBUG, INFO, WARNING, ERROR
+  log_file: "training.log"
+  print_frequency: 100         # 每隔多少次迭代打印一次损失
