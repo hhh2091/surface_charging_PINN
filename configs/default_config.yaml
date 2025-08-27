@@ -1,0 +1,152 @@
+# 航天器表面充电PINN项目配置文件
+# 集中管理所有超参数和配置
+
+# 数据生成参数
+data_generation:
+  # 环境参数扫描范围
+  n_e_range: [1e5, 1e8]      # 电子密度范围 (m^-3)
+  T_e_range: [0.1, 10.0]     # 电子温度范围 (eV)
+  n_i_range: [1e5, 1e8]      # 离子密度范围 (m^-3)
+  T_i_range: [0.1, 5.0]      # 离子温度范围 (eV)
+  
+  # 光照参数范围
+  S_flux_range: [0.0, 1400.0]    # 太阳辐射通量范围 (W/m^2)
+  alpha_sun_range: [0.0, 90.0]   # 太阳光入射角范围 (度)
+  
+  # 时间域设置
+  t_start: 0.0               # 起始时间 (s)
+  t_end: 3600.0              # 结束时间 (s)
+  n_time_points: 100         # 时间点数量
+  
+  # 数据集大小
+  train_scenarios: 1000      # 训练场景数量
+  test_scenarios: 200        # 测试场景数量
+  
+  # 材料类型
+  materials: [0, 1]          # 0: Kapton, 1: Aluminum
+
+# 网络架构配置
+network:
+  # 主网络 (V_NN) 架构
+  main_network:
+    input_dim: 8             # 输入维度: [t, n_e, T_e, n_i, T_i, S_flux, alpha_sun, material_id]
+    hidden_layers: [128, 128, 64, 32]  # 隐藏层神经元数
+    output_dim: 1            # 输出维度: V
+    activation: "tanh"       # 激活函数: tanh, swish
+    
+  # 子网络 (NN_yield) 架构
+  yield_network:
+    input_dim: 2             # 输入维度: [V, material_id]
+    hidden_layers: [64, 32, 16]  # 隐藏层神经元数
+    output_dim: 1            # 输出维度: J_emission
+    activation: "swish"      # 激活函数
+
+# 训练参数
+training:
+  # 两阶段优化策略
+  adam_phase:
+    learning_rate: 1e-3      # Adam学习率
+    iterations: 20000        # Adam迭代次数
+    batch_size: 256          # 批大小
+    
+  lbfgs_phase:
+    learning_rate: 1.0       # L-BFGS学习率
+    iterations: 5000         # L-BFGS迭代次数
+    max_iter: 20             # 每次L-BFGS最大迭代数
+    
+  # 损失函数权重
+  loss_weights:
+    lambda_residual: 1.0     # 物理残差权重
+    lambda_data: 10.0        # 数据拟合权重
+    lambda_initial: 5.0      # 初始条件权重
+    
+  # 动态权重调整
+  adaptive_weights:
+    enabled: true            # 是否启用自适应权重
+    update_frequency: 1000   # 权重更新频率
+    
+  # 模型保存
+  save_frequency: 5000       # 模型保存频率
+  checkpoint_dir: "checkpoints/"
+
+# 物理常数
+physics:
+  # 基本物理常数
+  e: 1.602e-19              # 电子电荷 (C)
+  k_B: 1.381e-23            # 玻尔兹曼常数 (J/K)
+  k_B_eV: 8.617e-5          # 玻尔兹曼常数 (eV/K)
+  m_e: 9.109e-31            # 电子质量 (kg)
+  m_i: 1.673e-27            # 质子质量 (kg)
+  
+  # 航天器参数
+  spacecraft:
+    area: 1.0               # 表面积 (m^2)
+    capacitance: 1e-9       # 等效电容 (F)
+    T_ph: 1.5               # 光电子特征温度 (eV)
+    
+  # 材料参数
+  materials:
+    kapton:                 # Kapton材料 (material_id = 0)
+      J_ph0_coefficient: 1e-5  # 光电子电流系数
+      J_sec0: 1e-6          # 二次电子发射系数
+      E_max: 10.0           # 最大能量 (eV)
+      
+    aluminum:               # Aluminum材料 (material_id = 1)
+      J_ph0_coefficient: 5e-6  # 光电子电流系数
+      J_sec0: 5e-7          # 二次电子发射系数
+      E_max: 15.0           # 最大能量 (eV)
+
+# 评估配置
+evaluation:
+  # 精度指标
+  metrics: ["rmse", "mae", "r2", "relative_l2"]
+  
+  # 物理核查场景
+  sanity_checks:
+    # 阴影区场景
+    shadow_scenario:
+      n_e: 1e6
+      T_e: 1.0
+      n_i: 1e6
+      T_i: 0.5
+      S_flux: 0.0           # 无太阳辐射
+      alpha_sun: 0.0
+      material_id: 0
+      
+    # 光照区场景
+    sunlit_scenario:
+      n_e: 1e6
+      T_e: 2.0
+      n_i: 5e5
+      T_i: 1.0
+      S_flux: 1360.0        # 标准太阳常数
+      alpha_sun: 0.0        # 垂直入射
+      material_id: 1
+
+# 可视化配置
+visualization:
+  # 图表设置
+  figure_size: [12, 8]
+  dpi: 300
+  style: "seaborn-v0_8"
+  
+  # 输出目录
+  output_dir: "results/"
+  
+  # 绘图类型
+  plot_types:
+    - "potential_vs_time"
+    - "current_components"
+    - "parameter_sensitivity"
+    - "material_comparison"
+
+# 设备配置
+device:
+  use_gpu: true             # 是否使用GPU
+  gpu_id: 0                 # GPU设备ID
+  
+# 日志配置
+logging:
+  level: "INFO"             # 日志级别
+  file: "training.log"      # 日志文件
+  console: true             # 是否输出到控制台
