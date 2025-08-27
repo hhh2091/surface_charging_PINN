@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
-
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 # 添加项目路径
 import sys
 sys.path.append(str(Path(__file__).parent.parent))

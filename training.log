@@ -2485,3 +2485,7 @@
 2025-08-27 15:36:43,201 - INFO - Checkpoint saved: checkpoints\checkpoint_adam_5000.pth
 2025-08-27 15:38:36,225 - INFO - Checkpoint saved: checkpoints\checkpoint_adam_10000.pth
 2025-08-27 15:40:27,002 - INFO - Checkpoint saved: checkpoints\checkpoint_adam_15000.pth
+2025-08-27 15:42:19,966 - INFO - Adam phase completed. Best loss: 0.000064
+2025-08-27 15:42:19,967 - INFO - Starting L-BFGS optimization phase...
+2025-08-27 15:42:19,974 - INFO - L-BFGS phase completed. Final best loss: 0.000064
+2025-08-27 15:42:20,009 - INFO - Final model saved: checkpoints\final_model.pth
