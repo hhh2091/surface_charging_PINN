@@ -73,11 +73,20 @@ python -c "import torch; import deepxde; print('Installation successful!')"
 ### 1. 生成训练数据
 
 ```bash
-# 使用默认配置生成数据
-python data_generation/generate_data.py --config configs/default_config.yaml --output data/
+# 使用默认配置生成数据（自动选择最佳求解方法）
+python data_generation/generate_data.py --config configs/default_config.yaml --output_dir data/
 
-# 自定义参数
-python data_generation/generate_data.py --config configs/default_config.yaml --output data/ --num_samples 10000
+# 使用前向欧拉法近似求解（适用于PDE难以收敛的情况）
+python data_generation/generate_data.py --config configs/default_config.yaml --output_dir data/ --solver approximate
+
+# 使用ODE求解器（最精确但可能不稳定）
+python data_generation/generate_data.py --config configs/default_config.yaml --output_dir data/ --solver ode
+
+# 使用解析近似法（最快但精度较低）
+python data_generation/generate_data.py --config configs/default_config.yaml --output_dir data/ --solver analytical
+
+# 自定义场景数量
+python data_generation/generate_data.py --config configs/default_config.yaml --output_dir data/ --train_scenarios 100 --test_scenarios 20
 ```
 
 ### 2. 训练模型
@@ -130,6 +139,11 @@ data_generation:
   
   # 材料类型
   materials: ['Kapton', 'Aluminum', 'Teflon', 'Carbon']
+  
+  # 求解方法
+  # 可选值: 'approximate' (前向欧拉法), 'ode' (solve_ivp), 'analytical' (解析近似), 'auto' (自动选择)
+  # 命令行参数 --solver 可覆盖此配置
+  solver_method: 'auto'
 ```
 
 ### 网络架构配置

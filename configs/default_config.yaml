@@ -24,6 +24,10 @@ data_generation:
   # 数据集大小 (Dataset Size)
   n_samples: 10000             # 训练样本数量
   n_test_samples: 2000         # 测试样本数量
+  
+  # 求解方法 (Solver Method)
+  # 可选值: 'approximate' (前向欧拉法), 'ode' (solve_ivp), 'analytical' (解析近似), 'auto' (自动选择)
+  solver_method: 'auto'
 
 # 网络架构参数 (Network Architecture)
 network:
